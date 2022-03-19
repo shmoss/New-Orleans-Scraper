@@ -3,6 +3,8 @@
 print ('Let bandsintown scraping commence!')
 
 from bs4 import BeautifulSoup
+import regex
+import time
 import requests
 import string
 import json
@@ -22,12 +24,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import ElementNotVisibleException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.wait import WebDriverWait
 
 from selenium.webdriver.common.by import By
 
 import os
-print(os.name)
-print(os.listdir("."))
+#print(os.name)
+#print(os.listdir("."))
 import sys
 import subprocess
 
@@ -43,7 +46,7 @@ import subprocess
 chrome_options = Options()
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--window-size=1420,1080')
-chrome_options.add_argument('--headless')
+#chrome_options.add_argument('--headless')
 chrome_options.add_argument('--disable-dev-shm-usage')
 chrome_options.add_argument('--disable-gpu')
 chrome_options.add_argument("--disable-notifications")
@@ -71,7 +74,7 @@ oneWeekDayFinal = (oneWeekSplit[0] + "," + oneWeekDayCleaned + "," + oneWeekSpli
 #p=datetime.datetime.strptime('June 5, 2019', '%b %d, %Y')
 #print p
 oneWeekDateTime = datetime.datetime.strptime(oneWeekDayFinal, '%A, %B %d, %Y')
-print(oneWeekDateTime)
+#print(oneWeekDateTime)
 
 # For testing, set date one day from now
 day = datetime.timedelta(days=3)
@@ -81,7 +84,7 @@ oneDayfromNow = oneDaySplit[1]
 oneDayCleaned = (re.sub(r'\D+$', '', oneDayfromNow))
 oneDayFinal = (oneDaySplit[0] + "," + oneDayCleaned + "," + oneDaySplit[2])
 oneDayDateTime = datetime.datetime.strptime(oneDayFinal, '%A, %B %d, %Y')
-print(oneDayDateTime, oneWeekDateTime)
+#print(oneDayDateTime, oneWeekDateTime)
 
 
 #Set up geocoder
@@ -98,7 +101,7 @@ print(oneDayDateTime, oneWeekDateTime)
 
 
 #Set base url (new orleans)
-base_url = 'https://www.bandsintown.com/?place_id=ChIJZYIRslSkIIYRtNMiXuhbBts&page='#new orleans
+base_url = 'https://www.bandsintown.com/?city_id=4335045&place_id=ChIJPZDrEzLsZIgRoNrpodC5P30&page='#new orleans
 #base_url = 'https://www.bandsintown.com/?place_id=ChIJOwg_06VPwokRYv534QaPC8g&page='
 
 
@@ -107,12 +110,14 @@ eventContainerBucket = []
 
 for i in range(1,15):
 
+    driver.implicitly_wait(3)
+
     #cycle through pages in range
     driver.get(base_url + str(i))
     pageURL = base_url + str(i)
 
     # get events links
-    event_list = driver.find_elements_by_css_selector('div[class^=_3buUBPWBhUz9KBQqgXm-gf] a[class^=_3UX9sLQPbNUbfbaigy35li]')
+    event_list = driver.find_elements_by_css_selector('div[class^=AtIvjk2YjzXSULT1cmVx] a[class^=HsqHp2xM2FkfSdjy1mlU]')
     # collect href attribute of events in even_list
     events.extend(list(event.get_attribute("href") for event in event_list))
 
@@ -129,7 +134,9 @@ for event in events:
 
     driver.get(event)
     currentUrl = driver.current_url
-    print(currentUrl)
+    #print(currentUrl)
+    driver.implicitly_wait(5)
+    
     try:
         currentRequest = requests.get(currentUrl, headers=headers)
         print (currentRequest)
@@ -144,7 +151,7 @@ for event in events:
         #print ("link working")
 
         try:
-            driver.find_element_by_css_selector('[class^=_3aZc11p4HaXXFyJp1e_XlL]')
+            driver.find_element_by_css_selector('[class^=XaEaRISs2tbDA8ghm1Z3]')
             print ("element exists!")
         except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
             print ("element doesn't exist")
@@ -152,10 +159,10 @@ for event in events:
 
 
         try:
-            soup = bs(driver.find_element_by_css_selector('[class^=_3aZc11p4HaXXFyJp1e_XlL]').get_attribute('outerHTML'))
-            soup2 = bs(driver.find_element_by_css_selector('[class^=_3iav3Z5WtxzstYRQKmp3cW]').get_attribute('outerHTML'))
+            soup = bs(driver.find_element_by_css_selector('[class^=XaEaRISs2tbDA8ghm1Z3]').get_attribute('outerHTML'))
+            soup2 = bs(driver.find_element_by_css_selector('[class^=dh8hHUu9p8ote5YXiifd]').get_attribute('outerHTML'))
         except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
-            print('no soup for you!')
+            #print('no soup for you!')
             continue
         #print(soup)
         #print(soup2)
@@ -166,69 +173,72 @@ for event in events:
         # Only pull one weeks worth of data
         # Find date of event and format to compare against one week from now date
         try:
-            dateMatch = soup.select_one('._1uSR2i2AbCWQwvNtGHdKnz').text
+            dateMatch = soup.select_one('.EfW1v6YNlQnbyB7fUHmR').text
             dateMatch = dateMatch.replace("th","")
             dateMatch = dateMatch.replace("st","")
             dateMatch = dateMatch.replace("nd","")
             dateMatch = dateMatch.replace("rd","")
             dateMatch = dateMatch.replace(".", "")
             dateMatch = dateMatch.replace(",", "")
-            print(dateMatch)
+            #print(dateMatch)
 
             datetime_object = datetime.datetime.strptime(dateMatch, '%b %d %Y')
             datetime_object_str = datetime_object.strftime("%Y-%m-%d")
-            print(datetime_object_str)
+            #print(datetime_object_str)
 
         except Exception:
-            print('no date')
+            #print('no date')
             continue
 
         #print dateMatchDate, oneWeekDateTime
 
         #compare date of event to one week from now date
         if datetime_object <= oneDayDateTime:
-            print ("this event occurs one week or less from today")
-            print("datetime object is", datetime_object)
+            #print ("this event occurs one week or less from today")
+            #print("datetime object is", datetime_object)
             #print "this event occurs one week or less from today"
 
             # Get artist
-            artist = soup.select_one('._2a7MPEB7nHW5q-0UQJsl6T').text
+            artist = soup.select_one('.Ei9BArGnSZVOQUo8LHDo').text
             #artist = driver.find_element_by_class_name('_2a7MPEB7nHW5q-0UQJsl6T').text
-            print(artist)
+            #print(artist)
 
 
             # Get date
-            date = soup.select_one('._1uSR2i2AbCWQwvNtGHdKnz').text
-            print(date)
+            date = soup.select_one('.EfW1v6YNlQnbyB7fUHmR').text
+            #print(date)
 
             # Get time
             try:
-                time = soup2.select_one('._1iK6x88EqsupILFxTvC9ip').text
-                print(time)
+                eventTime = soup2.select_one('.EVShpiZDtLTTZpfAxHav').text
+                #print(time)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
-                print('no time given')
+                #print('no time given')
                 pass
 
             # Get address
             try:
-                address= soup2.select_one('._36ZCsgOz77AokAEvfUegFS').text
-                print(address)
+                address= soup2.select_one('.e6YFaVBz8eqoPeVSqavc').text
+                address = re.sub("\s#\d+", "", address)
+                #print(address)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
-                print('no address given')
+                #print('no address given')
                 continue
 
             # Get venue
             try:
-                venue = soup.select_one('._241_qbENUQasyRr7CHEJmo').text
-                print(venue)
+                #venue = soup.select_one('._241_qbENUQasyRr7CHEJmo').text
+                venue = soup2.select_one('.q1Vlsw1cdclAUZ4gBvAn').text
+                
+                #print(venue)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
-                print('no venue given')
+                #print('no venue given')
                 pass
 
             #Get image
             artistImage = 'https://assets.prod.bandsintown.com/images/fallbackImage.png'
             try:
-                artistImage = driver.find_element_by_xpath("//div[@class='_1tHUGDRLiXm3qKqo5etU7i']//img").get_attribute("src")
+                artistImage = driver.find_element_by_xpath("//div[@class='F7R10lr6dTlupUZ_mPqj']//img").get_attribute("src")
                 print(artistImage)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
                 pass
@@ -240,13 +250,13 @@ for event in events:
                 #genre = driver.find_element_by_xpath("//div[@class='_1Se_dqLEba70e_1AFsdzO3']").text
                 #genre = driver.find_element_by_class_name('_1Se_dqLEba70e_1AFsdzO3').text
                 genre = ''
-                listed_genres = driver.find_elements_by_xpath("//div[@class='_1Se_dqLEba70e_1AFsdzO3']")
+                listed_genres = driver.find_elements_by_xpath("//div[@class='rsodiH6h7QlU5RdhFzAd']")
                 for str in listed_genres:
                     genre += (str.text + ',')
                 genre = genre.rstrip(',')
                 #add space between commas
                 genre = genre.replace(",",", ")
-                print(genre)
+                #print(genre)
                 if len(genre)==0:
                     genre = 'No genre available'
                 #genre = genreContainer.select_one('._1Se_dqLEba70e_1AFsdzO3').text
@@ -262,16 +272,16 @@ for event in events:
             #Get other information
             otherInfo = "No event info available"
             try:
-                otherInfo = driver.find_element_by_xpath("//div[@class='Wla7qETMG4RlwfQQMTIqx']").text
-                print(otherInfo)
+                otherInfo = driver.find_element_by_xpath("//div[@class='y6bPrd1MQ2AGJWSu6ogJ']").text
+                #print(otherInfo)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
                 pass
 
 
             # Capture additional event info
-            readMoreEventInfo = '_3oaUGN5TFR0ZX0m015tWoH'
+            readMoreEventInfo = 'xXGKBimvIBU_aEdJh3EF'
             try:
-                driver.find_element_by_xpath("//div[@class='_3oaUGN5TFR0ZX0m015tWoH']").click();
+                driver.find_element_by_xpath("//div[@class='xXGKBimvIBU_aEdJh3EF']").click();
                 #print(moreInfo)
             except (ElementNotVisibleException, NoSuchElementException):
                 pass
@@ -280,10 +290,10 @@ for event in events:
             #Regardless of whether or not there is "Read More", print complete event info.
             moreEventInfo = "No event info available"
             try:
-                moreEventInfo = driver.find_element_by_xpath("//div[@class='Wla7qETMG4RlwfQQMTIqx']").text
-                print("more event info is:", moreEventInfo)
+                moreEventInfo = driver.find_element_by_xpath("//div[@class='y6bPrd1MQ2AGJWSu6ogJ']").text
+                #print("more event info is:", moreEventInfo)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
-                print('no event info')
+                #print('no event info')
                 pass
 
 
@@ -291,14 +301,14 @@ for event in events:
             # Get artist bio
             artistBio = "No artist bio available"
             try:
-                artistBio = driver.find_element_by_xpath("//div[@class='VYokpSM2h3BWCLr3umXTd']").text
+                artistBio = driver.find_element_by_xpath("//div[@class='M7mgbzArlrYG7hASv1ZX']").text
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
                 pass
 
             # Capture additional bio info
-            readMore = '_1XRy4PRswl0g1ImXMkYiQO'
+            readMore = 'JdNT7h3QLPldUnZ2zmWK'
             try:
-                driver.find_element_by_xpath("//div[@class='_1XRy4PRswl0g1ImXMkYiQO']").click();
+                driver.find_element_by_xpath("//div[@class='JdNT7h3QLPldUnZ2zmWK']").click();
                 #print(moreInfo)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
                 pass
@@ -306,10 +316,10 @@ for event in events:
             #Regardless of whether or not there is "Read More", print complete bio info.
             moreBioInfo = "No artist bio available"
             try:
-                moreBioInfo = driver.find_element_by_xpath("//div[@class='VYokpSM2h3BWCLr3umXTd']").text
-                print("more bio info is:", moreBioInfo)
+                moreBioInfo = driver.find_element_by_xpath("//div[@class='M7mgbzArlrYG7hASv1ZX']").text
+                #print("more bio info is:", moreBioInfo)
             except (ElementNotVisibleException, NoSuchElementException, TimeoutException):
-                print('no moreBioInfo')
+                #print('no moreBioInfo')
                 pass
 
 
@@ -336,36 +346,33 @@ for event in events:
             #     pass
 
 
-            #Geocode Address using Google API
-            api_key = "AIzaSyA_YL0GLJSgUGFyJOEEzA1eH_gQzqiWkyY"
+            #Geocode Address using Mapbox API
+            api_key = "pk.eyJ1Ijoic3RhcnJtb3NzMSIsImEiOiJjam13ZHlxbXgwdncwM3FvMnJjeGVubjI5In0.-ridMV6bkkyNhbPfMJhVzw"
             try:
-                api_response = requests.get(
-                    'https://maps.googleapis.com/maps/api/geocode/json?address={0}&key={1}'.format(address, api_key))
-                api_response_dict = api_response.json()
-                if api_response_dict['status'] == 'OK':
-                    latitude = api_response_dict['results'][0]['geometry']['location']['lat']
-                    longitude = api_response_dict['results'][0]['geometry']['location']['lng']
-                    coord_list = [latitude, longitude]
-                    print(coord_list)
+                g = geocoder.mapbox(address, key=api_key)
+                if g.status == 'OK':
+                    coord_list = g.latlng
+                    #print(coord_list)
                 else:
-                    print('geocoding not successful!')
-                    pass
+                    #print('geocoding not successful!')
+                    coord_list = ['','']
             except Exception as e:
-                print('no result from geocode')
-                pass
+                #print('no result from geocode')
+                coord_list = ['','']
 
 
             #Bin information into 'item'
             item['Artist'] = artist
             item['Date'] = datetime_object_str
             item['eventDate'] = date
-            item['Time'] = time
+            item['Time'] = eventTime
             item['Venue'] = venue
             item['Address'] = address
             item['artistImage'] = artistImage
             item['genre'] = genre
             item['otherInfo'] = moreEventInfo
             item['moreBioInfo'] = moreBioInfo
+            item['currentUrl'] = currentUrl
             #print(moreBioInfo)
 
             # Get latitude, longitude
@@ -373,7 +380,7 @@ for event in events:
 
             # Format output to JSON
             case = {'Artist': item['Artist'], 'Date': item['Date'], 'EventDate': item['eventDate'], 'Time': item['Time'], 'Venue': item['Venue'],
-            'Address': item['Address'], 'Coordinates': coord_list, 'ArtistImage': item['artistImage'], 'Genre': item['genre'], 'otherInfo': item['otherInfo'], 'moreBioInfo': item['moreBioInfo']}
+            'Address': item['Address'], 'Coordinates': coord_list, 'ArtistImage': item['artistImage'], 'Genre': item['genre'], 'otherInfo': item['otherInfo'], 'moreBioInfo': item['moreBioInfo'], 'currentUrl': item['currentUrl']}
 
             item[event] = case
 
@@ -400,8 +407,8 @@ for event in events:
 
 with open("/home/ubuntu/bandsintown/neworleans_events.json", "w") as writeJSON:
     file_str = json.dumps(allEvents, sort_keys=True)
-    print('allEvents is',allEvents)
-    print('filestr is',file_str)
+    #print('allEvents is',allEvents)
+    #print('filestr is',file_str)
     file_str = "var neworleans_events = " + file_str
     writeJSON.write(file_str)
 driver.quit()
